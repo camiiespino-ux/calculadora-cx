@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Representatividad</title>
+<title>Representatividad estadística</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -16,18 +16,19 @@
     --radius: 10px; --radius-sm: 6px;
   }
   body { font-family: var(--font); background: var(--bg); color: var(--text); padding: 24px 20px 40px; font-size: 14px; }
-  .page-header { margin-bottom: 24px; }
+  .page-header { margin-bottom: 20px; }
   .page-header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 3px; }
   .page-header p { font-size: 12px; color: var(--muted); }
 
-  .config-row {
-    display: flex; align-items: center; gap: 12px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
-  }
-  .config-row label { font-size: 13px; color: var(--muted); white-space: nowrap; flex: 1; }
-  .config-row input[type=range] { flex: 2; accent-color: var(--accent); cursor: pointer; }
-  .config-row .rate-val { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); min-width: 44px; text-align: right; }
+  .config-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 20px; }
+  .config-box h3 { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .config-field { display: flex; flex-direction: column; gap: 6px; }
+  .config-field label { font-size: 12px; color: var(--muted); }
+  .config-field .slider-row { display: flex; align-items: center; gap: 10px; }
+  .config-field input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+  .config-field .val { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--accent); min-width: 48px; text-align: right; }
+  .config-hint { font-size: 11px; color: var(--muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 
   .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
   .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
@@ -55,8 +56,10 @@
   }
   input.num-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,79,216,0.12); }
 
-  .result-big { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--text); }
+  .result-big { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--text); }
   .result-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .result-sub.ok  { color: var(--green); }
+  .result-sub.bad { color: var(--red); }
 
   .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
   .badge-ok   { background: var(--green-bg); color: var(--green); }
@@ -70,21 +73,34 @@
 
   .total-row td { background: #F0F3F8; font-weight: 600; font-size: 13px; border-top: 1px solid var(--border); }
   .footer-note { margin-top: 14px; font-size: 11px; color: var(--muted); text-align: center; }
-
-  .input-hint { font-size: 10px; color: var(--muted); margin-top: 3px; }
 </style>
 </head>
 <body>
 
 <div class="page-header">
-  <h1>Calculadora de representatividad</h1>
-  <p>Grupo Petersen &mdash; Ingresá el universo y las respuestas obtenidas para saber cuántas necesitás</p>
+  <h1>Calculadora de representatividad estadística</h1>
+  <p>Grupo Petersen &mdash; Muestra mínima calculada con nivel de confianza y margen de error</p>
 </div>
 
-<div class="config-row">
-  <label>Tasa mínima requerida para ser representativo</label>
-  <input type="range" id="minRate" min="5" max="50" value="20" step="1" oninput="update()">
-  <span class="rate-val" id="minRateVal">20%</span>
+<div class="config-box">
+  <h3>Parámetros estadísticos</h3>
+  <div class="config-grid">
+    <div class="config-field">
+      <label>Nivel de confianza</label>
+      <div class="slider-row">
+        <input type="range" id="confidence" min="0" max="2" step="1" value="1" oninput="update()">
+        <span class="val" id="confidenceVal">95%</span>
+      </div>
+    </div>
+    <div class="config-field">
+      <label>Margen de error</label>
+      <div class="slider-row">
+        <input type="range" id="margin" min="1" max="10" step="1" value="5" oninput="update()">
+        <span class="val" id="marginVal">5%</span>
+      </div>
+    </div>
+  </div>
+  <div class="config-hint" id="formulaHint"></div>
 </div>
 
 <div class="summary" id="kpis"></div>
@@ -96,7 +112,7 @@
         <th>Banco</th>
         <th>Universo</th>
         <th>Respuestas obtenidas</th>
-        <th>Respuestas necesarias</th>
+        <th>Muestra mínima</th>
         <th>Progreso</th>
         <th>Estado</th>
       </tr>
@@ -106,7 +122,7 @@
 </div>
 
 <div class="footer-note">
-  Celdas azules editables &nbsp;&middot;&nbsp; Respuestas necesarias = universo &times; tasa mínima &nbsp;&middot;&nbsp; Marginal = 70%&ndash;99% del mínimo
+  Fórmula: n = (Z² &times; 0.5 &times; 0.5) / e² ajustado por universo finito &nbsp;&middot;&nbsp; Celdas azules editables
 </div>
 
 <script>
@@ -114,15 +130,28 @@ const BANKS = [
   { name: "Banco Entre Ríos", color: "#C0392B", universo: 0, respuestas: 0 },
   { name: "Banco Santa Cruz",  color: "#378ADD", universo: 0, respuestas: 0 },
   { name: "Banco Santa Fe",    color: "#0E9E6E", universo: 0, respuestas: 0 },
-  { name: "Banco San Juan",    color: "#C47B00", universo: 0, respuestas: 0  },
+  { name: "Banco San Juan",    color: "#C47B00", universo: 0, respuestas: 0 },
 ];
 
-function minRate() { return parseInt(document.getElementById("minRate").value) / 100; }
+const Z_VALUES = [1.645, 1.96, 2.576];
+const Z_LABELS = ["90%", "95%", "99%"];
+
+function getZ()      { return Z_VALUES[parseInt(document.getElementById("confidence").value)]; }
+function getZLabel() { return Z_LABELS[parseInt(document.getElementById("confidence").value)]; }
+function getE()      { return parseInt(document.getElementById("margin").value) / 100; }
+
+function sampleSize(N) {
+  if (N <= 0) return 0;
+  const z = getZ(), e = getE();
+  const n0 = (z * z * 0.25) / (e * e);
+  return Math.ceil(n0 / (1 + (n0 - 1) / N));
+}
 
 function getStatus(resp, needed) {
-  if (resp >= needed)           return ["Representativo",    "badge-ok",   "#0E9E6E"];
-  if (resp >= needed * 0.7)     return ["Marginal",          "badge-warn", "#C47B00"];
-  return                               ["No representativo", "badge-bad",  "#C0392B"];
+  if (needed === 0)              return ["Sin universo",      "badge-warn", "#C47B00"];
+  if (resp >= needed)            return ["Representativo",    "badge-ok",   "#0E9E6E"];
+  if (resp >= needed * 0.7)      return ["Marginal",          "badge-warn", "#C47B00"];
+  return                                ["No representativo", "badge-bad",  "#C0392B"];
 }
 
 function barColor(resp, needed) {
@@ -132,29 +161,31 @@ function barColor(resp, needed) {
 }
 
 function update() {
-  const min = minRate();
-  document.getElementById("minRateVal").textContent = Math.round(min * 100) + "%";
+  const z = getZ(), e = getE(), zLabel = getZLabel();
+  document.getElementById("confidenceVal").textContent = zLabel;
+  document.getElementById("marginVal").textContent     = Math.round(e * 100) + "%";
+  document.getElementById("formulaHint").textContent   =
+    "Z=" + z + " (confianza " + zLabel + ")  ·  e=" + Math.round(e*100) + "%  ·  p=0.5 (máxima variabilidad)  ·  Ajuste por universo finito aplicado";
 
   let totUniv = 0, totResp = 0, totNeeded = 0, totRep = 0;
 
   document.querySelectorAll(".bank-row").forEach((tr, i) => {
     const univ   = Math.max(0, parseInt(tr.querySelector(".univ-input").value)  || 0);
     const resp   = Math.max(0, parseInt(tr.querySelector(".resp-input").value)  || 0);
-    const needed = Math.ceil(univ * min);
+    const needed = sampleSize(univ);
     const pct    = needed > 0 ? Math.min(resp / needed * 100, 100) : 0;
+    const gap    = Math.max(needed - resp, 0);
     const [label, cls, bc] = getStatus(resp, needed);
 
-    // respuestas necesarias
     tr.querySelector(".needed-cell").innerHTML =
-      "<div class='result-big'>" + needed.toLocaleString("es-AR") + "</div>" +
-      "<div class='result-sub'>" + (resp >= needed ? "ya alcanzado" : "faltan " + (needed - resp).toLocaleString("es-AR")) + "</div>";
+      "<div class='result-big'>" + (needed > 0 ? needed.toLocaleString("es-AR") : "—") + "</div>" +
+      "<div class='result-sub " + (gap === 0 && needed > 0 ? "ok" : gap > 0 ? "bad" : "") + "'>" +
+      (needed === 0 ? "ingresá universo" : gap === 0 ? "alcanzado" : "faltan " + gap.toLocaleString("es-AR")) + "</div>";
 
-    // barra progreso
     tr.querySelector(".bar-fill").style.width      = pct.toFixed(1) + "%";
-    tr.querySelector(".bar-fill").style.background = bc;
-    tr.querySelector(".pct-label").textContent     = pct.toFixed(0) + "%";
+    tr.querySelector(".bar-fill").style.background = needed > 0 ? barColor(resp, needed) : "#E8ECF2";
+    tr.querySelector(".pct-label").textContent     = needed > 0 ? pct.toFixed(0) + "%" : "—";
 
-    // badge
     const badge = tr.querySelector(".badge");
     badge.className   = "badge " + cls;
     badge.textContent = label;
@@ -166,21 +197,24 @@ function update() {
   });
 
   const totPct = totNeeded > 0 ? Math.min(totResp / totNeeded * 100, 100) : 0;
-  const [tLabel, tCls] = getStatus(totResp, totNeeded);
+  const totGap = Math.max(totNeeded - totResp, 0);
+  const [tLabel, tCls, tColor] = getStatus(totResp, totNeeded);
+
   const tfoot = document.querySelector(".total-row");
   tfoot.cells[1].textContent = totUniv.toLocaleString("es-AR");
   tfoot.cells[2].textContent = totResp.toLocaleString("es-AR");
   tfoot.cells[3].innerHTML   =
-    "<div class='result-big'>" + totNeeded.toLocaleString("es-AR") + "</div>" +
-    "<div class='result-sub'>" + (totResp >= totNeeded ? "ya alcanzado" : "faltan " + (totNeeded - totResp).toLocaleString("es-AR")) + "</div>";
+    "<div class='result-big'>" + (totNeeded > 0 ? totNeeded.toLocaleString("es-AR") : "—") + "</div>" +
+    "<div class='result-sub " + (totGap === 0 && totNeeded > 0 ? "ok" : "bad") + "'>" +
+    (totNeeded === 0 ? "" : totGap === 0 ? "alcanzado" : "faltan " + totGap.toLocaleString("es-AR")) + "</div>";
   tfoot.cells[4].innerHTML   =
-    "<div class='progress-wrap'><div class='bar-bg'><div class='bar-fill' style='width:" + totPct.toFixed(1) + "%;background:" + barColor(totResp, totNeeded) + "'></div></div>" +
-    "<span class='pct-label'>" + totPct.toFixed(0) + "%</span></div>";
+    "<div class='progress-wrap'><div class='bar-bg'><div class='bar-fill' style='width:" + totPct.toFixed(1) + "%;background:" + (totNeeded>0?barColor(totResp,totNeeded):"#E8ECF2") + "'></div></div>" +
+    "<span class='pct-label'>" + (totNeeded > 0 ? totPct.toFixed(0) + "%" : "—") + "</span></div>";
   tfoot.cells[5].innerHTML   = "<span class='badge " + tCls + "'>" + tLabel + "</span>";
 
   document.getElementById("kpis").innerHTML =
     kpi("Universo total",        totUniv.toLocaleString("es-AR"),   "") +
-    kpi("Respuestas necesarias", totNeeded.toLocaleString("es-AR"), "para tasa del " + Math.round(min*100) + "%") +
+    kpi("Muestra mínima total",  totNeeded > 0 ? totNeeded.toLocaleString("es-AR") : "—", "confianza " + zLabel + " · error " + Math.round(e*100) + "%") +
     kpi("Bancos representativos", totRep + " / " + BANKS.length,   "sobre " + BANKS.length + " bancos");
 }
 
@@ -190,7 +224,7 @@ function kpi(label, val, sub) {
 
 function buildTable() {
   const tbody = document.getElementById("tbody");
-  BANKS.forEach((b, i) => {
+  BANKS.forEach((b) => {
     const tr = document.createElement("tr");
     tr.className = "bank-row";
     tr.innerHTML =
@@ -202,7 +236,6 @@ function buildTable() {
       "<td><span class='badge'></span></td>";
     tbody.appendChild(tr);
   });
-
   const tfoot = document.createElement("tr");
   tfoot.className = "total-row";
   tfoot.innerHTML = "<td>Total consolidado</td><td></td><td></td><td></td><td></td><td></td>";
