@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Representatividad</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F8FA; --surface: #FFFFFF; --border: #E2E6ED;
+    --text: #1A2233; --muted: #6B7897; --accent: #1E4FD8;
+    --accent-light: #EEF3FF; --green: #0E9E6E; --green-bg: #EDFAF5;
+    --amber: #C47B00; --amber-bg: #FFF8E6; --red: #C0392B; --red-bg: #FEF0EE;
+    --font: "DM Sans", sans-serif; --mono: "DM Mono", monospace;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); padding: 24px 20px 40px; font-size: 14px; }
+  .page-header { margin-bottom: 24px; }
+  .page-header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 3px; }
+  .page-header p { font-size: 12px; color: var(--muted); }
+
+  .config-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
+  }
+  .config-row label { font-size: 13px; color: var(--muted); white-space: nowrap; flex: 1; }
+  .config-row input[type=range] { flex: 2; accent-color: var(--accent); cursor: pointer; }
+  .config-row .rate-val { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); min-width: 44px; text-align: right; }
+
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .kpi-val { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; font-family: var(--mono); }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #F0F3F8; }
+  th { padding: 10px 14px; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; text-align: center; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th:first-child { text-align: left; }
+  td { padding: 0 14px; border-bottom: 1px solid var(--border); height: 58px; vertical-align: middle; text-align: center; }
+  td:first-child { text-align: left; }
+  tr:last-child td { border-bottom: none; }
+
+  .bank-name { font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+  input.num-input {
+    font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent);
+    background: var(--accent-light); border: 1px solid #C5D5F8; border-radius: var(--radius-sm);
+    padding: 6px 8px; width: 90px; text-align: center; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input.num-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,79,216,0.12); }
+
+  .result-big { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--text); }
+  .result-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .badge-ok   { background: var(--green-bg); color: var(--green); }
+  .badge-warn { background: var(--amber-bg); color: var(--amber); }
+  .badge-bad  { background: var(--red-bg);   color: var(--red); }
+
+  .progress-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar-bg { width: 80px; height: 6px; background: #E8ECF2; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.35s ease, background 0.35s; }
+  .pct-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .total-row td { background: #F0F3F8; font-weight: 600; font-size: 13px; border-top: 1px solid var(--border); }
+  .footer-note { margin-top: 14px; font-size: 11px; color: var(--muted); text-align: center; }
+
+  .input-hint { font-size: 10px; color: var(--muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Calculadora de representatividad</h1>
+  <p>Grupo Petersen &mdash; Ingresá el universo y las respuestas obtenidas para saber cuántas necesitás</p>
+</div>
+
+<div class="config-row">
+  <label>Tasa mínima requerida para ser representativo</label>
+  <input type="range" id="minRate" min="5" max="50" value="20" step="1" oninput="update()">
+  <span class="rate-val" id="minRateVal">20%</span>
+</div>
+
+<div class="summary" id="kpis"></div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Banco</th>
+        <th>Universo</th>
+        <th>Respuestas obtenidas</th>
+        <th>Respuestas necesarias</th>
+        <th>Progreso</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="footer-note">
+  Celdas azules editables &nbsp;&middot;&nbsp; Respuestas necesarias = universo &times; tasa mínima &nbsp;&middot;&nbsp; Marginal = 70%&ndash;99% del mínimo
+</div>
+
+<script>
+const BANKS = [
+  { name: "Banco Entre Ríos", color: "#1D9E75", universo: 1200, respuestas: 310 },
+  { name: "Banco Santa Cruz",  color: "#378ADD", universo: 850,  respuestas: 190 },
+  { name: "Banco Santa Fe",    color: "#D85A30", universo: 1500, respuestas: 420 },
+  { name: "Banco San Juan",    color: "#7F77DD", universo: 600,  respuestas: 95  },
+];
+
+function minRate() { return parseInt(document.getElementById("minRate").value) / 100; }
+
+function getStatus(resp, needed) {
+  if (resp >= needed)           return ["Representativo",    "badge-ok",   "#0E9E6E"];
+  if (resp >= needed * 0.7)     return ["Marginal",          "badge-warn", "#C47B00"];
+  return                               ["No representativo", "badge-bad",  "#C0392B"];
+}
+
+function barColor(resp, needed) {
+  if (resp >= needed)       return "#0E9E6E";
+  if (resp >= needed * 0.7) return "#C47B00";
+  return "#E24B4A";
+}
+
+function update() {
+  const min = minRate();
+  document.getElementById("minRateVal").textContent = Math.round(min * 100) + "%";
+
+  let totUniv = 0, totResp = 0, totNeeded = 0, totRep = 0;
+
+  document.querySelectorAll(".bank-row").forEach((tr, i) => {
+    const univ   = Math.max(0, parseInt(tr.querySelector(".univ-input").value)  || 0);
+    const resp   = Math.max(0, parseInt(tr.querySelector(".resp-input").value)  || 0);
+    const needed = Math.ceil(univ * min);
+    const pct    = needed > 0 ? Math.min(resp / needed * 100, 100) : 0;
+    const [label, cls, bc] = getStatus(resp, needed);
+
+    // respuestas necesarias
+    tr.querySelector(".needed-cell").innerHTML =
+      "<div class='result-big'>" + needed.toLocaleString("es-AR") + "</div>" +
+      "<div class='result-sub'>" + (resp >= needed ? "ya alcanzado" : "faltan " + (needed - resp).toLocaleString("es-AR")) + "</div>";
+
+    // barra progreso
+    tr.querySelector(".bar-fill").style.width      = pct.toFixed(1) + "%";
+    tr.querySelector(".bar-fill").style.background = bc;
+    tr.querySelector(".pct-label").textContent     = pct.toFixed(0) + "%";
+
+    // badge
+    const badge = tr.querySelector(".badge");
+    badge.className   = "badge " + cls;
+    badge.textContent = label;
+
+    totUniv   += univ;
+    totResp   += resp;
+    totNeeded += needed;
+    if (label === "Representativo") totRep++;
+  });
+
+  const totPct = totNeeded > 0 ? Math.min(totResp / totNeeded * 100, 100) : 0;
+  const [tLabel, tCls] = getStatus(totResp, totNeeded);
+  const tfoot = document.querySelector(".total-row");
+  tfoot.cells[1].textContent = totUniv.toLocaleString("es-AR");
+  tfoot.cells[2].textContent = totResp.toLocaleString("es-AR");
+  tfoot.cells[3].innerHTML   =
+    "<div class='result-big'>" + totNeeded.toLocaleString("es-AR") + "</div>" +
+    "<div class='result-sub'>" + (totResp >= totNeeded ? "ya alcanzado" : "faltan " + (totNeeded - totResp).toLocaleString("es-AR")) + "</div>";
+  tfoot.cells[4].innerHTML   =
+    "<div class='progress-wrap'><div class='bar-bg'><div class='bar-fill' style='width:" + totPct.toFixed(1) + "%;background:" + barColor(totResp, totNeeded) + "'></div></div>" +
+    "<span class='pct-label'>" + totPct.toFixed(0) + "%</span></div>";
+  tfoot.cells[5].innerHTML   = "<span class='badge " + tCls + "'>" + tLabel + "</span>";
+
+  document.getElementById("kpis").innerHTML =
+    kpi("Universo total",        totUniv.toLocaleString("es-AR"),   "") +
+    kpi("Respuestas necesarias", totNeeded.toLocaleString("es-AR"), "para tasa del " + Math.round(min*100) + "%") +
+    kpi("Bancos representativos", totRep + " / " + BANKS.length,   "sobre " + BANKS.length + " bancos");
+}
+
+function kpi(label, val, sub) {
+  return "<div class='kpi'><div class='kpi-label'>" + label + "</div><div class='kpi-val'>" + val + "</div><div class='kpi-sub'>" + sub + "</div></div>";
+}
+
+function buildTable() {
+  const tbody = document.getElementById("tbody");
+  BANKS.forEach((b, i) => {
+    const tr = document.createElement("tr");
+    tr.className = "bank-row";
+    tr.innerHTML =
+      "<td><div class='bank-name'><div class='dot' style='background:" + b.color + "'></div>" + b.name + "</div></td>" +
+      "<td><input class='num-input univ-input' type='number' min='0' value='" + b.universo   + "' oninput='update()'></td>" +
+      "<td><input class='num-input resp-input' type='number' min='0' value='" + b.respuestas + "' oninput='update()'></td>" +
+      "<td class='needed-cell'></td>" +
+      "<td><div class='progress-wrap'><div class='bar-bg'><div class='bar-fill'></div></div><span class='pct-label'></span></div></td>" +
+      "<td><span class='badge'></span></td>";
+    tbody.appendChild(tr);
+  });
+
+  const tfoot = document.createElement("tr");
+  tfoot.className = "total-row";
+  tfoot.innerHTML = "<td>Total consolidado</td><td></td><td></td><td></td><td></td><td></td>";
+  tbody.appendChild(tfoot);
+}
+
+buildTable();
+update();
+</script>
+</body>
+</html>
